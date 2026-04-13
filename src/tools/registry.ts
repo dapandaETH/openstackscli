@@ -10,3 +10,13 @@ export function createBuiltInRegistry(workspaceRoot: string): Map<string, ToolDe
     ['run_shell', createRunShellTool(workspaceRoot)]
   ])
 }
+
+export function addPluginTools(registry: Map<string, unknown>, plugins: Array<{ tools: Array<{ name: string }> }>) {
+  for (const plugin of plugins) {
+    for (const tool of plugin.tools) {
+      registry.set(tool.name, tool)
+    }
+  }
+
+  return registry
+}
