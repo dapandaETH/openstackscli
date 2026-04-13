@@ -12,11 +12,10 @@ const defaultProviderId = process.env.OPENCODE_API_KEY ? 'opencode' : 'mock'
 
 const registry = new ProviderRegistry()
 
-let hasOpenCodeKey = Boolean(process.env.OPENCODE_API_KEY)
+const hasOpenCodeKey = () => registry.get('opencode') !== undefined
 
-function handleConnection(ws: WebSocket, req: { headers: Record<string, string | string[] | undefined> }) {
+function handleConnection(ws: WebSocket, _req: { headers: Record<string, string | string[] | undefined> }) {
   const engine = new AgentEngine({ providerRegistry: registry })
-  const isSecure = req.headers['x-forwarded-proto'] === 'https'
 
   ws.on('message', async (data: Buffer | ArrayBuffer | string) => {
     const text = data instanceof Buffer ? data.toString() : String(data)
@@ -47,8 +46,6 @@ function handleConnection(ws: WebSocket, req: { headers: Record<string, string |
     }
   })
 
-  ws.on('close', () => {
-  })
 }
 
 export async function startServer(opts: { port: number; host?: string }): Promise<void> {
@@ -61,7 +58,8 @@ export async function startServer(opts: { port: number; host?: string }): Promis
 
   app.use(express.json())
   app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://dapandaeth.github.io')
+    const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://dapandaeth.github.io/openstackscli/'
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin)
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
     if (req.method === 'OPTIONS') {
@@ -80,12 +78,16 @@ export async function startServer(opts: { port: number; host?: string }): Promis
       return
     }
     registry.setOpenCodeKey(apiKey)
-    hasOpenCodeKey = true
     res.json({ success: true })
   })
 
   app.get('/api/key', (_req, res) => {
-    res.json({ hasKey: hasOpenCodeKey })
+    res.json({ hasKey: hasOpenCodeKey() })
+  })
+
+  app.get('/api/config', (req, res) => {
+    const isSecure = req.headers['x-forwarded-proto'] === 'https'
+    res.json({ wsProtocol: isSecure ? 'wss' : 'ws' })
   })
 
   const wss = new WebSocketServer({ server: httpServer })
@@ -95,8 +97,8 @@ export async function startServer(opts: { port: number; host?: string }): Promis
   process.on('SIGTERM', () => { httpServer.close(); process.exit(0) })
 
   return new Promise((resolve, reject) => {
-    httpServer.on('error', (err: NodeJS.ErrnoException) => {
-      if (err.code === 'EADDRINUSE') {
+    httpServer.on('error', (err: unknown) => {
+      if (err instanceof Error && 'code' in err && err.code === 'EADDRINUSE') {
         console.error(`Port ${port} is already in use. Try a different port.`)
         process.exit(1)
       }

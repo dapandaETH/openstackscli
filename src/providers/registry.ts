@@ -11,8 +11,12 @@ export class ProviderRegistry {
     const apiKey = process.env.OPENCODE_API_KEY
     if (apiKey) {
       const baseURL = process.env.OPENCODE_BASE_URL ?? 'https://opencode.ai/zen/v1'
-      this.providers.set('opencode', new OpenCodeProvider(apiKey, baseURL))
+      this.setOpenCodeKey(apiKey, baseURL)
     }
+  }
+
+  setOpenCodeKey(apiKey: string, baseURL = 'https://opencode.ai/zen/v1'): void {
+    this.providers.set('opencode', new OpenCodeProvider(apiKey, baseURL))
   }
 
   get(providerId: string) {
