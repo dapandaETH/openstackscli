@@ -22,6 +22,22 @@ export class SessionStore {
     }
   }
 
+  async list() {
+    try {
+      const files = await fs.readdir(this.dir)
+      const sessions = await Promise.all(
+        files.filter((file) => file.endsWith('.json')).map(async (file) => {
+          const content = await fs.readFile(path.join(this.dir, file), 'utf8')
+          return JSON.parse(content) as SessionRecord
+        })
+      )
+
+      return sessions.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    } catch {
+      return []
+    }
+  }
+
   private filePath(id: string) {
     return path.join(this.dir, `${id}.json`)
   }
