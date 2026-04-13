@@ -15,8 +15,10 @@ export class SessionStore {
     try {
       const content = await fs.readFile(this.filePath(id), 'utf8')
       return JSON.parse(content) as SessionRecord
-    } catch {
-      return null
+    } catch (err) {
+      const code = (err as { code?: string }).code
+      if (code === 'ENOENT') return null
+      throw err
     }
   }
 
