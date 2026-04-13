@@ -1,5 +1,6 @@
 import type { Command } from 'commander'
 import { SessionStore } from '../sessions/store.js'
+import { getSessionsDir } from '../config/paths.js'
 import { renderApp } from '../tui/app.js'
 
 export function registerSessionCommand(program: Command) {
@@ -7,7 +8,7 @@ export function registerSessionCommand(program: Command) {
     .command('sessions')
     .description('Open the interactive session picker')
     .action(async () => {
-      const store = new SessionStore('.openstacks/sessions')
+      const store = new SessionStore(getSessionsDir())
       const sessions = await store.list()
       renderApp(sessions)
     })
