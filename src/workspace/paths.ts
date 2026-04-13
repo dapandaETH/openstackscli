@@ -1,12 +1,10 @@
 import path from 'node:path'
 
 export function resolveWorkspacePath(workspaceRoot: string, targetPath: string) {
-  const resolved = path.resolve(workspaceRoot, targetPath)
   const normalizedRoot = path.resolve(workspaceRoot)
-
-  if (!resolved.startsWith(normalizedRoot)) {
+  const relative = path.relative(normalizedRoot, path.resolve(normalizedRoot, targetPath))
+  if (relative.startsWith('..')) {
     throw new Error(`Path escapes workspace: ${targetPath}`)
   }
-
-  return resolved
+  return path.resolve(normalizedRoot, targetPath)
 }
