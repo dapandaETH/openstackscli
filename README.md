@@ -7,7 +7,7 @@ A clean-room coding agent CLI inspired by OpenCode. V1 focuses on local develope
 - Node.js 18, 20, or 22 (LTS versions recommended)
 - macOS or Linux
 
-> **Note:** The interactive TUI (`openstacks sessions` and `openstacks serve`) requires Node.js 18–22. Node 23+ has a `react-reconciler` compatibility issue with `ink@5`. The `openstacks run` one-shot command works on all Node.js versions.
+> **Note:** The interactive TUI (`openstacks sessions`) requires Node.js 18–22. Node 23+ has a `react-reconciler` compatibility issue with `ink@5`. The `openstacks run` and `openstacks serve` commands work on all Node.js versions.
 
 ## Installation
 
@@ -77,7 +77,7 @@ Requires Node.js 18–22.
 
 ### `openstacks serve`
 
-Start a local web server that renders the interactive TUI in your browser.
+Start a local web server with a browser-based chat UI.
 
 ```bash
 node ./bin/openstacks.js serve
@@ -89,15 +89,11 @@ node ./bin/openstacks.js serve --port 8080 --host 0.0.0.0
 
 **What it does:**
 1. Starts an HTTP + WebSocket server on the configured host:port
-2. Serves a browser-based terminal UI (xterm.js)
-3. Spawns a PTY running `openstacks sessions` for each connected browser tab
-4. Relays terminal I/O over WebSocket in real-time
+2. Serves a browser-based chat UI at the root URL
+3. Each prompt is sent to the agent engine and streamed back in real time
+4. WebSocket protocol: send `{ "type": "prompt", "prompt": "..." }`, receive `{ "type": "start" }` → `{ "type": "text", "text": "..." }` → `{ "type": "end" }`
 
-Open `http://localhost:3000` in your browser to access the TUI. Each browser tab gets its own independent session.
-
-> **Native module note:** `node-pty` requires platform-specific binaries. If you see an import error, run `npm rebuild node-pty` to rebuild for your platform. Prebuilt binaries are included for macOS (Intel and Apple Silicon) and Linux.
-
-Requires Node.js 18–22.
+Open `http://localhost:3000` in your browser to start chatting.
 
 ## Session Management
 

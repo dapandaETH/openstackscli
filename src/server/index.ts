@@ -1,29 +1,51 @@
 import express from 'express'
 import { createServer } from 'node:http'
-import { WebSocketServer } from 'ws'
-import { pathToFileURL } from 'node:url'
+import { WebSocketServer, type WebSocket } from 'ws'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { dirname } from 'node:path'
-import { fileURLToPath as fileURLToPathFn } from 'node:url'
+import { AgentEngine } from '../agent/engine.js'
+import { ProviderRegistry } from '../providers/registry.js'
 
-let nodePty: typeof import('node-pty')
-try {
-  nodePty = await import('node-pty')
-} catch {
-  throw new Error(
-    'Failed to import node-pty. This is a native module that must be rebuilt for your platform. ' +
-    'Run: npm rebuild node-pty'
-  )
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+function handleConnection(ws: WebSocket) {
+  const engine = new AgentEngine({ providerRegistry: new ProviderRegistry() })
+
+  ws.on('message', async (data: Buffer | ArrayBuffer | string) => {
+    const text = data instanceof Buffer ? data.toString() : String(data)
+
+    let payload: { type: string; prompt?: string }
+    try {
+      payload = JSON.parse(text)
+    } catch {
+      ws.send(JSON.stringify({ type: 'error', message: 'Invalid JSON' }))
+      return
+    }
+
+    if (payload.type !== 'prompt' || typeof payload.prompt !== 'string') {
+      ws.send(JSON.stringify({ type: 'error', message: 'Expected { "type": "prompt", "prompt": "..." }' }))
+      return
+    }
+
+    ws.send(JSON.stringify({ type: 'start' }))
+
+    try {
+      await engine.run({ providerId: 'mock', prompt: payload.prompt }, (chunk) => {
+        ws.send(JSON.stringify({ type: 'text', text: chunk }))
+      })
+      ws.send(JSON.stringify({ type: 'end' }))
+    } catch (err) {
+      ws.send(JSON.stringify({ type: 'error', message: (err as Error).message }))
+    }
+  })
+
+  ws.on('close', () => {
+    // engine holds no persistent resources to clean up per connection
+  })
 }
-
-const __dirname = dirname(fileURLToPathFn(import.meta.url))
 
 export async function startServer(opts: { port: number; host: string }): Promise<void> {
   const { port, host } = opts
-  const activePtys = new Set<import('node-pty').IPty>()
 
   const app = express()
   const httpServer = createServer(app)
@@ -31,59 +53,10 @@ export async function startServer(opts: { port: number; host: string }): Promise
   app.use(express.static(path.join(__dirname, 'public')))
 
   const wss = new WebSocketServer({ server: httpServer })
+  wss.on('connection', handleConnection)
 
-  wss.on('connection', (ws, req) => {
-    const openstacksBin = resolve(__dirname, '..', '..', 'bin', 'openstacks.js')
-
-    const pty = nodePty.spawn(process.execPath, [openstacksBin, 'sessions'], {
-      name: 'xterm-256color',
-      cols: 80,
-      rows: 24,
-      cwd: resolve(__dirname, '..', '..'),
-      env: { ...process.env, TERM: 'xterm-256color' } as Record<string, string>
-    })
-
-    activePtys.add(pty)
-
-    pty.onData((data: string) => {
-      if (ws.readyState === ws.OPEN) {
-        ws.send(data)
-      }
-    })
-
-    pty.onExit(({ exitCode }) => {
-      activePtys.delete(pty)
-      if (ws.readyState === ws.OPEN) {
-        ws.close(1000, `PTY exited with code ${exitCode}`)
-      }
-    })
-
-    ws.on('message', (data: Buffer | ArrayBuffer | string) => {
-      const input = data instanceof Buffer ? data.toString() : String(data)
-      pty.write(input)
-    })
-
-    ws.on('close', () => {
-      activePtys.delete(pty)
-      pty.kill()
-    })
-
-    ws.on('error', () => {
-      activePtys.delete(pty)
-      pty.kill()
-    })
-  })
-
-  const shutdown = () => {
-    for (const pty of activePtys) {
-      pty.kill()
-    }
-    activePtys.clear()
-    httpServer.close()
-  }
-
-  process.on('SIGINT', shutdown)
-  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', () => { httpServer.close(); process.exit(0) })
+  process.on('SIGTERM', () => { httpServer.close(); process.exit(0) })
 
   return new Promise((resolve, reject) => {
     httpServer.on('error', (err: NodeJS.ErrnoException) => {
