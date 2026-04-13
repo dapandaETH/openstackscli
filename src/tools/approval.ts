@@ -1,7 +1,7 @@
 import path from 'node:path'
 import type { RiskInput } from './types.js'
 
-const DESTRUCTIVE_SHELL_PATTERN = /\b(rm|mv|git reset|git clean)\b/
+const DESTRUCTIVE_SHELL_PATTERN = /\b(rm|mv|git reset|git clean|git checkout --)\b/
 const NETWORK_PATTERN = /\b(curl|wget|scp|ssh)\b/
 
 export function isRiskyAction(input: RiskInput, workspaceRoot?: string) {
