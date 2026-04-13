@@ -5,7 +5,7 @@ export type ProviderMessage = {
 
 export type ProviderEvent =
   | { type: 'text-delta'; text: string }
-  | { type: 'message_complete' }
+  | { type: 'message-complete' }
   | { type: 'error'; message: string }
 
 export interface ProviderAdapter {

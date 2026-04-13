@@ -6,6 +6,6 @@ export class MockProvider implements ProviderAdapter {
   async *stream(messages: ProviderMessage[]): AsyncIterable<ProviderEvent> {
     const last = messages.at(-1)?.content ?? ''
     yield { type: 'text-delta', text: `Mock response to: ${last}` }
-    yield { type: 'message_complete' }
+    yield { type: 'message-complete' }
   }
 }

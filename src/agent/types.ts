@@ -1,4 +1,4 @@
-import type { ProviderMessage } from '../providers/types.js'
+import type { ProviderAdapter, ProviderMessage } from '../providers/types.js'
 
 export type EngineRunInput = {
   providerId: string
@@ -7,6 +7,6 @@ export type EngineRunInput = {
 
 export type EngineDependencies = {
   providerRegistry: {
-    get(providerId: string): { stream(messages: ProviderMessage[]): AsyncIterable<{ type: string; text?: string }> }
+    get(providerId: string): ProviderAdapter
   }
 }
