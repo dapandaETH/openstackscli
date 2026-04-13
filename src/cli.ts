@@ -10,5 +10,8 @@ export async function buildCli() {
   const { registerSessionCommand } = await import('./commands/session.js')
   registerSessionCommand(program)
 
+  const { registerServeCommand } = await import('./commands/serve.js')
+  registerServeCommand(program)
+
   return program
 }

@@ -14,13 +14,18 @@
   },
   "dependencies": {
     "commander": "^13.1.0",
+    "express": "^4.21.2",
     "ink": "^5.2.1",
+    "node-pty": "^1.0.0",
     "react": "^19.1.0",
+    "ws": "^8.18.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/react": "^19.1.2",
+    "@types/ws": "^8.5.13",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
