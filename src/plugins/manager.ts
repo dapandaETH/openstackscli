@@ -5,6 +5,8 @@ type PluginManagerDeps = {
   spawnPlugin?: (spec: PluginSpec) => Promise<PluginHandshake>
 }
 
+const HANDSHAKE_TIMEOUT_MS = 5000
+
 export class PluginManager {
   constructor(private readonly deps: PluginManagerDeps = {}) {}
 
@@ -18,9 +20,8 @@ export class PluginManager {
     }
 
     const child = spawn(spec.command, spec.args ?? [], { stdio: ['pipe', 'pipe', 'inherit'] })
-    child.stdin.write(JSON.stringify({ type: 'handshake' }) + '\n')
 
-    return await new Promise<PluginHandshake>((resolve, reject) => {
+    const handshake = new Promise<PluginHandshake>((resolve, reject) => {
       child.stdout.once('data', (buffer) => {
         try {
           resolve(JSON.parse(buffer.toString()) as PluginHandshake)
@@ -30,5 +31,19 @@ export class PluginManager {
       })
       child.once('error', reject)
     })
+
+    child.stdin.write(JSON.stringify({ type: 'handshake' }) + '\n')
+
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Plugin handshake timeout: ${spec.command}`)), HANDSHAKE_TIMEOUT_MS)
+    )
+
+    try {
+      const result = await Promise.race([handshake, timeout])
+      child.kill()
+      return result
+    } finally {
+      child.stdin.end()
+    }
   }
 }
