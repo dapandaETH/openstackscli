@@ -1,6 +1,6 @@
 import express from 'express'
 import { createServer } from 'node:http'
-import { WebSocketServer, type WebSocket } from 'ws'
+import { WebSocketServer, WebSocket } from 'ws'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AgentEngine } from '../agent/engine.js'
@@ -12,8 +12,11 @@ const defaultProviderId = process.env.OPENCODE_API_KEY ? 'opencode' : 'mock'
 
 const registry = new ProviderRegistry()
 
-function handleConnection(ws: WebSocket) {
+let hasOpenCodeKey = Boolean(process.env.OPENCODE_API_KEY)
+
+function handleConnection(ws: WebSocket, req: { headers: Record<string, string | string[] | undefined> }) {
   const engine = new AgentEngine({ providerRegistry: registry })
+  const isSecure = req.headers['x-forwarded-proto'] === 'https'
 
   ws.on('message', async (data: Buffer | ArrayBuffer | string) => {
     const text = data instanceof Buffer ? data.toString() : String(data)
@@ -50,13 +53,40 @@ function handleConnection(ws: WebSocket) {
 
 export async function startServer(opts: { port: number; host?: string }): Promise<void> {
   const host = opts.host ?? '0.0.0.0'
-  const { port } = opts
+  const port = Number(process.env.PORT) || opts.port
   const displayHost = host === '0.0.0.0' ? 'localhost' : host
 
   const app = express()
   const httpServer = createServer(app)
 
+  app.use(express.json())
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', 'https://dapandaeth.github.io')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(200)
+      return
+    }
+    next()
+  })
+
   app.use(express.static(path.join(__dirname, 'public')))
+
+  app.post('/api/key', (req, res) => {
+    const { apiKey } = req.body
+    if (!apiKey || typeof apiKey !== 'string') {
+      res.status(400).json({ error: 'apiKey is required' })
+      return
+    }
+    registry.setOpenCodeKey(apiKey)
+    hasOpenCodeKey = true
+    res.json({ success: true })
+  })
+
+  app.get('/api/key', (_req, res) => {
+    res.json({ hasKey: hasOpenCodeKey })
+  })
 
   const wss = new WebSocketServer({ server: httpServer })
   wss.on('connection', handleConnection)
