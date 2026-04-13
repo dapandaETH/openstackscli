@@ -5,7 +5,7 @@ export function registerServeCommand(program: Command) {
     .command('serve')
     .description('Start the browser-accessible terminal server')
     .option('-p, --port <number>', 'Port to listen on', '3000')
-    .option('--host <string>', 'Host to bind to', 'localhost')
+    .option('--host <string>', 'Host to bind to', '0.0.0.0')
     .action(async (opts) => {
       try {
         const { startServer } = await import('../server/index.js')

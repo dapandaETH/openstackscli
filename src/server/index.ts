@@ -44,8 +44,9 @@ function handleConnection(ws: WebSocket) {
   })
 }
 
-export async function startServer(opts: { port: number; host: string }): Promise<void> {
-  const { port, host } = opts
+export async function startServer(opts: { port: number; host?: string }): Promise<void> {
+  const host = opts.host ?? '0.0.0.0'
+  const { port } = opts
 
   const app = express()
   const httpServer = createServer(app)
@@ -68,7 +69,8 @@ export async function startServer(opts: { port: number; host: string }): Promise
     })
 
     httpServer.listen(port, host, () => {
-      console.log(`http://${host}:${port}`)
+      const displayHost = host === '0.0.0.0' ? 'localhost' : host
+      console.log(`http://${displayHost}:${port}`)
       resolve()
     })
   })
