@@ -8,13 +8,17 @@ import { ProviderRegistry } from '../providers/registry.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+const defaultProviderId = process.env.OPENCODE_API_KEY ? 'opencode' : 'mock'
+
+const registry = new ProviderRegistry()
+
 function handleConnection(ws: WebSocket) {
-  const engine = new AgentEngine({ providerRegistry: new ProviderRegistry() })
+  const engine = new AgentEngine({ providerRegistry: registry })
 
   ws.on('message', async (data: Buffer | ArrayBuffer | string) => {
     const text = data instanceof Buffer ? data.toString() : String(data)
 
-    let payload: { type: string; prompt?: string }
+    let payload: { type: string; prompt?: string; providerId?: string }
     try {
       payload = JSON.parse(text)
     } catch {
@@ -27,10 +31,11 @@ function handleConnection(ws: WebSocket) {
       return
     }
 
+    const providerId = payload.providerId ?? defaultProviderId
     ws.send(JSON.stringify({ type: 'start' }))
 
     try {
-      await engine.run({ providerId: 'mock', prompt: payload.prompt }, (chunk) => {
+      await engine.run({ providerId, prompt: payload.prompt }, (chunk) => {
         ws.send(JSON.stringify({ type: 'text', text: chunk }))
       })
       ws.send(JSON.stringify({ type: 'end' }))
@@ -40,13 +45,13 @@ function handleConnection(ws: WebSocket) {
   })
 
   ws.on('close', () => {
-    // engine holds no persistent resources to clean up per connection
   })
 }
 
 export async function startServer(opts: { port: number; host?: string }): Promise<void> {
   const host = opts.host ?? '0.0.0.0'
   const { port } = opts
+  const displayHost = host === '0.0.0.0' ? 'localhost' : host
 
   const app = express()
   const httpServer = createServer(app)
@@ -69,8 +74,7 @@ export async function startServer(opts: { port: number; host?: string }): Promis
     })
 
     httpServer.listen(port, host, () => {
-      const displayHost = host === '0.0.0.0' ? 'localhost' : host
-      console.log(`http://${displayHost}:${port}`)
+      console.log(`http://${displayHost}:${port}  provider=${defaultProviderId}`)
       resolve()
     })
   })
