@@ -18,6 +18,12 @@ describe('session flow', () => {
 
     const files = await fs.readdir(tempDir)
     expect(files.length).toBe(1)
+
+    const sessionContent = await fs.readFile(path.join(tempDir, files[0]), 'utf8')
+    const session = JSON.parse(sessionContent)
+    expect(session.title).toBe('create a plan')
+    expect(session.workspaceRoot).toBe('/repo')
+    expect(session.messages).toHaveLength(2)
     expect(writes.join('')).toContain('create a plan')
   })
 })

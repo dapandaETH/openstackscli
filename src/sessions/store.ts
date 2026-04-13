@@ -33,8 +33,10 @@ export class SessionStore {
       )
 
       return sessions.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    } catch {
-      return []
+    } catch (err) {
+      const code = (err as { code?: string }).code
+      if (code === 'ENOENT') return []
+      throw err
     }
   }
 
