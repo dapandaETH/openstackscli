@@ -1,3 +1,4 @@
 import { buildCli } from './cli.js'
 
-await buildCli().parseAsync(process.argv)
+const program = await buildCli()
+await program.parseAsync(process.argv)

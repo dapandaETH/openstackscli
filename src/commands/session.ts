@@ -1,7 +1,6 @@
 import type { Command } from 'commander'
 import { SessionStore } from '../sessions/store.js'
 import { getSessionsDir } from '../config/paths.js'
-import { renderApp } from '../tui/app.js'
 
 export function registerSessionCommand(program: Command) {
   program
@@ -10,6 +9,7 @@ export function registerSessionCommand(program: Command) {
     .action(async () => {
       const store = new SessionStore(getSessionsDir())
       const sessions = await store.list()
+      const { renderApp } = await import('../tui/app.js')
       renderApp(sessions)
     })
 }
