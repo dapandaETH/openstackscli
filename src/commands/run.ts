@@ -1,5 +1,5 @@
-export function registerRunCommand(program: {
-  command(name: string): { description(text: string): unknown }
-}) {
+import type { Command } from 'commander'
+
+export function registerRunCommand(program: Command) {
   program.command('run').description('Run one-shot prompt execution')
 }
