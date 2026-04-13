@@ -1,11 +1,15 @@
-import { describe, expect, it } from 'vitest'
-import { buildCli } from '../../src/cli'
+import { describe, expect, it, vi } from 'vitest'
+import { createRunAction } from '../../src/commands/run.js'
 
-describe('buildCli', () => {
-  it('registers the run command', () => {
-    const program = buildCli()
-    const command = program.commands.find((item) => item.name() === 'run')
+describe('createRunAction', () => {
+  it('streams assistant output for a prompt', async () => {
+    const writes: string[] = []
+    const run = createRunAction({
+      stdout: { write: (value: string) => void writes.push(value) }
+    })
 
-    expect(command).toBeDefined()
+    await run('hello world')
+
+    expect(writes.join('')).toContain('hello world')
   })
 })
