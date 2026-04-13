@@ -4,12 +4,13 @@
   "private": true,
   "type": "module",
   "bin": {
-    "openstacks": "./src/index.ts"
+    "openstacks": "./bin/openstacks.js"
   },
   "scripts": {
     "dev": "tsx src/index.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "commander": "^13.1.0",
